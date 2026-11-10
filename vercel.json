@@ -1,0 +1,10 @@
+{
+  "buildCommand": "cd agenteval-dashboard && npm install && npm run build",
+  "outputDirectory": "agenteval-dashboard/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
