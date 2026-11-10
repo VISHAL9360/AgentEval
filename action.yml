@@ -1,6 +1,6 @@
 name: AgentEval regression gate
 description: Run AgentEval against an agent and expose the regression decision and reports.
-author: Nishant Tyagi
+author: Vishal K
 
 branding:
   icon: check-circle

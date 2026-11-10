@@ -279,10 +279,10 @@ jobs:
       - uses: actions/checkout@v5
 
       # GitHub Actions resolve owner/repository@ref. AgentEval publishes its
-      # reusable composite action as nishanttyagi28/agenteval@v1.
+      # reusable composite action as VISHAL9360/AgentEval@v1.
       - name: Run AgentEval
         id: agenteval
-        uses: nishanttyagi28/agenteval@v1
+        uses: VISHAL9360/AgentEval@v1
         with:
           agent: {agent_name}
           config-file: agents.yaml

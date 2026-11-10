@@ -3,7 +3,7 @@
   "displayName": "AgentEval",
   "description": "Run AgentEval evaluation suites from the VS Code command palette.",
   "version": "0.0.1",
-  "publisher": "nishanttyagi28",
+  "publisher": "VISHAL9360",
   "private": true,
   "license": "MIT",
   "engines": {
@@ -56,7 +56,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nishanttyagi28/agenteval.git",
+    "url": "https://github.com/VISHAL9360/AgentEval.git",
     "directory": "vscode-extension"
   }
 }

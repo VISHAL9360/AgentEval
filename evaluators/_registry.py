@@ -193,7 +193,7 @@ def discover_evaluators(entry_points: Iterable[Any] | None = None) -> tuple[Eval
         EvaluatorInfo(
             name=name,
             source="built-in",
-            package="nishanttyagi-agenteval",
+            package="vishal-agenteval",
             version=__version__,
             target=None,
             status="available",

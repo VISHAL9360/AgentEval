@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nishanttyagi-agenteval"
+name = "vishal-agenteval"
 dynamic = ["version"]
 description = "CI-integrated evaluation harness for LLM agents"
 readme = "README.md"
@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-  { name = "Nishant Tyagi" },
+  { name = "Vishal K" },
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -51,9 +51,9 @@ karmasakshi = [
 agenteval = "agenteval.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/nishanttyagi28/agenteval"
-Repository = "https://github.com/nishanttyagi28/agenteval"
-Issues = "https://github.com/nishanttyagi28/agenteval/issues"
+Homepage = "https://github.com/VISHAL9360/AgentEval"
+Repository = "https://github.com/VISHAL9360/AgentEval"
+Issues = "https://github.com/VISHAL9360/AgentEval/issues"
 
 [tool.setuptools]
 packages = [

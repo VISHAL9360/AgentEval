@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Minimal example evaluator plugin for AgentEval"
 requires-python = ">=3.10"
 dependencies = [
-  "nishanttyagi-agenteval>=0.1.0",
+  "vishal-agenteval>=0.1.0",
 ]
 
 [project.entry-points."agenteval.evaluators"]

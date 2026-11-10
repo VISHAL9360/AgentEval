@@ -244,7 +244,7 @@ class OpenAIAgentsAdapter(AgentAdapter):
         except ImportError as exc:
             raise ImportError(
                 "OpenAI Agents SDK is not installed; install "
-                "'nishanttyagi-agenteval[openai-agents]'"
+                "'vishal-agenteval[openai-agents]'"
             ) from exc
         return Runner
 

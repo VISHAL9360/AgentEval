@@ -15,7 +15,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# git is required for pip install of git+https deps (nishanttyagi-agenteval).
+# git is required for pip install of git+https deps (vishal-agenteval).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*

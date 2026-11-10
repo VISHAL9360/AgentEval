@@ -122,5 +122,5 @@ def test_consumer_example_uses_versioned_root_action():
     steps = workflow["jobs"]["evaluate"]["steps"]
 
     action_step = next(step for step in steps if step.get("id") == "agenteval")
-    assert action_step["uses"] == "nishanttyagi28/agenteval@v1"
+    assert action_step["uses"] == "VISHAL9360/AgentEval@v1"
     assert action_step["with"]["agent"] == "my_agent"

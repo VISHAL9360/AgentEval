@@ -5,4 +5,4 @@ python-multipart==0.0.20
 
 # Install AgentEval from main (Tiers 1–5 SQL). PyPI is still on 0.1.0 without
 # the full scanner; pin to git until 0.1.1+ is published.
-nishanttyagi-agenteval @ git+https://github.com/nishanttyagi28/agenteval.git@main
+vishal-agenteval @ git+https://github.com/VISHAL9360/AgentEval.git@main

@@ -1,6 +1,6 @@
 """KarmaSakshi Protocol bridge — seal → attempt → witness → score.
 
-KarmaSakshi is an optional dependency (``pip install nishanttyagi-agenteval[karmasakshi]``
+KarmaSakshi is an optional dependency (``pip install vishal-agenteval[karmasakshi]``
 or ``pip install karmasakshi-protocol``). Importing this module does not require it;
 calling bridge helpers or constructing :class:`KarmaSakshiRefundAdapter` does.
 

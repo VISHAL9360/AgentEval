@@ -84,7 +84,7 @@ Production **Failure Memory** engine (product V2 / V2.1) and related local-first
 
 ### Notes
 
-- PyPI distribution name remains `nishanttyagi-agenteval`; Python import package remains `agenteval`.
+- PyPI distribution name remains `vishal-agenteval`; Python import package remains `agenteval`.
 - Failure Memory databases, traces, generated goldens, and temporary artifacts are **not** packaged; they are created at runtime under `.agenteval/` or user-specified paths.
 - See `docs/failure-memory.md` for operator documentation.
 
@@ -93,4 +93,4 @@ Production **Failure Memory** engine (product V2 / V2.1) and related local-first
 Previous public package line before Failure Memory (V2 / V2.1) packaging for 0.3.0.
 See git history on `main` for detailed pre-0.3.0 changes.
 
-[0.3.0]: https://github.com/nishanttyagi28/agenteval/compare/v0.2.0...v0.3.0
+[0.3.0]: https://github.com/VISHAL9360/AgentEval/compare/v0.2.0...v0.3.0

@@ -7,7 +7,7 @@ dependencies = [
   "fastapi==0.116.1",
   "uvicorn[standard]==0.35.0",
   "python-multipart==0.0.20",
-  "nishanttyagi-agenteval>=0.1.1",
+  "vishal-agenteval>=0.1.1",
 ]
 
 [project.optional-dependencies]

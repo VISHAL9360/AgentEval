@@ -10,7 +10,7 @@ contract reference in [`docs/plugins.md`](../../docs/plugins.md).
 
 ## How the plugin system works
 
-1. A plugin is a normal Python package that depends on `nishanttyagi-agenteval`.
+1. A plugin is a normal Python package that depends on `vishal-agenteval`.
 2. It exposes a callable with signature
    `(context: EvaluationContext) -> EvaluationResult`.
 3. The callable is registered under the entry-point group
@@ -134,7 +134,7 @@ build-backend = "setuptools.build_meta"
 name = "my-policy-evaluator"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = ["nishanttyagi-agenteval>=0.1.0"]
+dependencies = ["vishal-agenteval>=0.1.0"]
 
 [project.entry-points."agenteval.evaluators"]
 my_policy = "my_policy_evaluator:evaluate"

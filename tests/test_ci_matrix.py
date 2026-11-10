@@ -8,7 +8,7 @@ def test_ci_matrix_contains_only_enabled_agents():
         "agentic_data_analyst"
     ]
     entry = matrix["include"][0]
-    assert entry["repository"] == "nishanttyagi28/agentic-data-analyst"
+    assert entry["repository"] == "VISHAL9360/agentic-data-analyst"
     assert entry["checkout_path"] == "_deps/agentic-data-analyst"
     assert "total_customers" in entry["smoke_case_ids"]
     assert "scheme_saathi" not in str(matrix)

@@ -82,7 +82,7 @@ function reportSpawnFailure(
     err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT";
   const message = isMissingExecutable
     ? `AgentEval: could not find "${pythonPath}". Install Python and the agenteval package ` +
-      '(pip install nishanttyagi-agenteval), or set "agenteval.pythonPath" in settings to the ' +
+      '(pip install vishal-agenteval), or set "agenteval.pythonPath" in settings to the ' +
       "interpreter that has it installed."
     : `AgentEval: failed to start the suite (${err instanceof Error ? err.message : String(err)}).`;
   channel.appendLine(message);

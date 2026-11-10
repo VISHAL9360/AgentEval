@@ -2,7 +2,7 @@
 
 Thin, optional integration so one agent-style workflow can:
 
-1. **Seal** an approved effect with [KarmaSakshi Protocol](https://github.com/nishanttyagi28/karmasakshi-protocol) (what was approved),
+1. **Seal** an approved effect with [KarmaSakshi Protocol](https://github.com/VISHAL9360/karmasakshi-protocol) (what was approved),
 2. **Execute / simulate** an attempt (payment simulator; offline),
 3. **Witness / verify** the actual outcome,
 4. **Score / record** the run with AgentEval (pass/fail + Failure Memory when the attempt fails).

@@ -179,7 +179,7 @@ export default function App() {
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/70 px-3 py-1 font-mono text-[0.7rem] text-zinc-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            nishanttyagi-agenteval · sql scan
+            vishal-agenteval · sql scan
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             SQL Agent Safety Scanner

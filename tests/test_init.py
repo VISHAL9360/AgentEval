@@ -219,7 +219,7 @@ def test_generate_github_workflow_is_valid_yaml_and_references_action(tmp_path):
     assert path == tmp_path / ".github" / "workflows" / "agenteval.yml"
     text = path.read_text(encoding="utf-8")
     parsed = yaml.safe_load(text)
-    assert "nishanttyagi28/agenteval@v1" in text
+    assert "VISHAL9360/AgentEval@v1" in text
     assert "install-extras: autogen" in text
     assert parsed["jobs"]["evaluate"]["steps"][1]["with"]["agent"] == "my_agent"
 

@@ -29,7 +29,7 @@ see [Settings](#settings) for how to point at the right interpreter.
 - [Node.js](https://nodejs.org/) 18+ and npm
 - VS Code 1.85+
 - Separately: a Python environment with `agenteval` installed
-  (`pip install nishanttyagi-agenteval`, or `pip install -e .` from the repo
+  (`pip install vishal-agenteval`, or `pip install -e .` from the repo
   root) if you actually want **Run Suite** to succeed when you invoke it.
 
 ## Build and run locally

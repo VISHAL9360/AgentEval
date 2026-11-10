@@ -13,10 +13,10 @@ jobs:
       - uses: actions/checkout@v5
 
       # GitHub Actions resolve owner/repository@ref. This repository publishes
-      # the root action as nishanttyagi28/agenteval@v1.
+      # the root action as VISHAL9360/AgentEval@v1.
       - name: Run AgentEval
         id: agenteval
-        uses: nishanttyagi28/agenteval@v1
+        uses: VISHAL9360/AgentEval@v1
         with:
           agent: my_agent
           config-file: agents.yaml

@@ -101,7 +101,7 @@ const status = { textContent: "" };
 const year = { textContent: "" };
 const copyLabel = { textContent: "Copy" };
 const copyButton = {
-  dataset: { copy: "pip install nishanttyagi-agenteval" },
+  dataset: { copy: "pip install vishal-agenteval" },
   addEventListener: (type, handler) => listeners.push([type, handler]),
   querySelector: () => copyLabel,
 };

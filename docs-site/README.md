@@ -6,7 +6,7 @@ mirroring the same pattern `landing-page/` already uses for the marketing site.
 
 **This is a local scaffold only.** There is no deployment workflow for it yet, and it is not
 linked from anywhere public. See the main [README](../README.md) for the currently deployed
-[landing page](https://nishanttyagi28.github.io/agenteval/).
+[landing page](https://vishal9360.github.io/agenteval/).
 
 ## Pages
 

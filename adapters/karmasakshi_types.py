@@ -22,7 +22,7 @@ class KarmaSakshiNotInstalledError(ImportError):
     def __init__(self) -> None:
         super().__init__(
             "karmasakshi-protocol is required for the AgentEval ↔ KarmaSakshi bridge. "
-            'Install with: pip install "nishanttyagi-agenteval[karmasakshi]" '
+            'Install with: pip install "vishal-agenteval[karmasakshi]" '
             "or pip install karmasakshi-protocol"
         )
 

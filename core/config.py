@@ -57,7 +57,7 @@ def resolve_agent_repo(
     checked = "\n".join(f"  - {path}" for path in candidates) or "  - (none)"
     raise AgentDependencyNotFound(
         "Agentic Data Analyst dependency not found. Clone "
-        "https://github.com/nishanttyagi28/agentic-data-analyst next to AgentEval "
+        "https://github.com/VISHAL9360/agentic-data-analyst next to AgentEval "
         "or set AGENTIC_ANALYST_PATH.\nChecked:\n" + checked
     )
 
