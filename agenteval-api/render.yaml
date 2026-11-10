@@ -1,0 +1,21 @@
+# Render Blueprint — AgentEval SQL API (free tier).
+#
+# When this service uses Root Directory = agenteval-api, paths below are
+# relative to that directory (Docker context is agenteval-api/, not the
+# monorepo root).
+#
+# Note: free-tier Web Services spin down after idle; cold starts are fine
+# for a portfolio demo.
+
+services:
+  - type: web
+    name: agenteval-api
+    runtime: docker
+    plan: free
+    # Context and Dockerfile are both inside Root Directory (agenteval-api/).
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"

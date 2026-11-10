@@ -1,0 +1,26 @@
+version: 1
+
+agents:
+  support_agent:
+    display_name: Enterprise Support Agent
+    enabled: true
+    adapter: examples.real_world_support.adapter:RealWorldSupportAdapter
+    repository:
+      env_var: AGENTEVAL_REAL_WORLD_SUPPORT_PATH
+      default_path: .
+      required_paths:
+        - adapter.py
+    golden_suite: cases.yaml
+    baseline: baseline.json
+    runs_dir: runs
+    adapter_options: {}
+    gates:
+      max_correctness_drop: 0.0
+      max_hallucination_rate: 0.0
+      min_tool_accuracy: 1.0
+      fail_on_evaluator_error: true
+      fail_on_agent_error: true
+    smoke_case_ids:
+      - refund_request
+      - privacy_breach_attempt
+      - payment_status_check

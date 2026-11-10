@@ -1,0 +1,500 @@
+"""Baseline comparison and CI regression gate.
+
+This module deliberately operates on persisted report dictionaries so old run
+artifacts remain comparable as the in-memory schema evolves.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+from typing import Any, Iterable
+
+from agenteval.core.significance import DEFAULT_ALPHA, SignificanceResult, evaluate_significance
+
+
+@dataclass(frozen=True)
+class GateThresholds:
+    """Thresholds that decide whether a current run may be shipped.
+
+    ``max_cost_increase_pct``, ``max_latency_p95_ms``, and
+    ``max_token_increase_pct`` are opt-in safety gates: ``None`` (the
+    default) disables the corresponding check, so existing callers that
+    never set them see no behavior change.
+
+    ``max_flakiness_rate`` and ``min_trajectory_f1`` are the same kind of
+    opt-in gate for per-case flakiness (1 - consistency) and trajectory F1.
+    ``None`` (default) leaves those metrics observability-only.
+    """
+
+    max_correctness_drop: float = 0.05
+    max_hallucination_rate: float = 0.10
+    min_tool_accuracy: float = 0.90
+    fail_on_evaluator_error: bool = True
+    fail_on_agent_error: bool = True
+    max_cost_increase_pct: float | None = None
+    max_latency_p95_ms: float | None = None
+    max_token_increase_pct: float | None = None
+    # §Tier 6 Phase 3: opt-in McNemar significance check on a correctness-drop
+    # failure. False (the default) preserves the exact prior gate behavior --
+    # every existing caller that never sets this sees no change at all.
+    require_statistical_significance: bool = False
+    significance_alpha: float = DEFAULT_ALPHA
+    max_flakiness_rate: float | None = None
+    min_trajectory_f1: float | None = None
+
+
+@dataclass(frozen=True)
+class MetricDelta:
+    key: str
+    baseline: float | None
+    current: float | None
+    delta: float | None
+    higher_is_better: bool
+
+
+@dataclass(frozen=True)
+class CaseTransition:
+    case_id: str
+    baseline_status: str
+    current_status: str
+
+
+@dataclass
+class ComparisonResult:
+    passed: bool
+    reasons: list[str] = field(default_factory=list)
+    metrics: list[MetricDelta] = field(default_factory=list)
+    case_transitions: list[CaseTransition] = field(default_factory=list)
+    evaluator_error_count: int = 0
+    agent_error_count: int = 0
+    # §Tier 6 Phase 3: populated only when GateThresholds.require_statistical_
+    # significance is True and a correctness drop is observed -- None means
+    # "not computed", not "no significant change" (see mcnemar.significant
+    # for that).
+    significance: SignificanceResult | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        if self.significance is None:
+            data.pop("significance", None)
+        return data
+
+
+_METRICS: tuple[tuple[str, bool], ...] = (
+    ("correctness_rate", True),
+    ("hallucination_rate", False),
+    ("tool_call_accuracy", True),
+    ("latency_p50_ms", False),
+    ("latency_p95_ms", False),
+    ("total_cost_usd", False),
+    ("total_tokens", False),
+)
+
+
+def _number(report: dict[str, Any], key: str) -> float | None:
+    value = report.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def case_status(case: dict[str, Any] | None) -> str:
+    """Derive a case's status, tolerating run JSON written before ``status`` existed.
+
+    Older run artifacts (and any hand-built report dict) may not carry an
+    explicit ``status`` field; this reconstructs one from ``correctness_pass``
+    / ``judge_reason`` / ``raw`` the same way the regression gate always has,
+    so every consumer of a persisted report — the gate, ``agenteval report``,
+    dashboards — agrees on one case's outcome.
+    """
+    if case is None:
+        return "missing"
+    explicit = case.get("status")
+    if explicit in {"passed", "failed", "agent_error", "evaluator_error", "skipped"}:
+        return str(explicit)
+    raw = case.get("raw") or {}
+    if raw.get("route") == "harness_error":
+        return "agent_error"
+    reason = str(case.get("judge_reason") or "").lower()
+    if reason.startswith("judge error") or reason == "llm_judge skipped":
+        return "evaluator_error"
+    if case.get("correctness_pass") is True:
+        return "passed"
+    if case.get("correctness_pass") is False:
+        return "failed"
+    return "skipped"
+
+
+def _cases_by_id(report: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for case in report.get("case_results") or []:
+        if isinstance(case, dict) and case.get("case_id"):
+            result[str(case["case_id"])] = case
+    return result
+
+
+def trajectory_gate_reasons(
+    report: dict[str, Any],
+    min_trajectory_f1: float | None,
+) -> list[str]:
+    """Return human-readable breaches for the opt-in trajectory F1 gate.
+
+    ``None`` disables the gate entirely (no reasons). Cases without trajectory
+    evidence are skipped; only cases that already carry a ``trajectory.score``
+    are checked, so suites without ``expected_trajectory`` stay unaffected.
+    """
+    if min_trajectory_f1 is None:
+        return []
+    reasons: list[str] = []
+    scored = 0
+    for case in report.get("case_results") or []:
+        if not isinstance(case, dict):
+            continue
+        trajectory = case.get("trajectory")
+        if not isinstance(trajectory, dict):
+            continue
+        score = trajectory.get("score")
+        if score is None:
+            continue
+        try:
+            score_f = float(score)
+        except (TypeError, ValueError):
+            continue
+        scored += 1
+        if score_f < min_trajectory_f1 - 1e-12:
+            case_id = str(case.get("case_id") or "?")
+            reasons.append(
+                f"trajectory F1 for {case_id} is {score_f:.3f} "
+                f"(below min_trajectory_f1={min_trajectory_f1:.3f})"
+            )
+    if scored == 0:
+        reasons.append(
+            "min_trajectory_f1 is set but no case reported a trajectory score "
+            "(add expected_trajectory to golden cases or unset the gate)"
+        )
+    return reasons
+
+
+def flakiness_gate_reasons(
+    flakiness_report: Any,
+    max_flakiness_rate: float | None,
+) -> list[str]:
+    """Return human-readable breaches for the opt-in per-case flakiness gate.
+
+    Flakiness rate for a case is ``1 - consistency_score`` (so stable cases
+    have rate 0.0). ``None`` disables the gate. When no flakiness report is
+    supplied the gate is a no-op (repeat evidence was never collected).
+    """
+    if max_flakiness_rate is None or flakiness_report is None:
+        return []
+
+    if isinstance(flakiness_report, dict):
+        cases = flakiness_report.get("cases") or []
+    else:
+        cases = getattr(flakiness_report, "cases", ()) or ()
+
+    reasons: list[str] = []
+    for case in cases:
+        if isinstance(case, dict):
+            case_id = str(case.get("case_id") or "?")
+            consistency = case.get("consistency_score")
+        else:
+            case_id = str(getattr(case, "case_id", "?") or "?")
+            consistency = getattr(case, "consistency_score", None)
+        if consistency is None:
+            continue
+        try:
+            consistency_f = float(consistency)
+        except (TypeError, ValueError):
+            continue
+        rate = 1.0 - consistency_f
+        if rate > max_flakiness_rate + 1e-12:
+            reasons.append(
+                f"flakiness rate for {case_id} is {rate:.3f} "
+                f"(exceeds max_flakiness_rate={max_flakiness_rate:.3f}; "
+                f"consistency={consistency_f:.3f})"
+            )
+    return reasons
+
+
+def compare_runs(
+    baseline: dict[str, Any],
+    current: dict[str, Any],
+    thresholds: GateThresholds | None = None,
+    *,
+    flakiness_report: Any = None,
+) -> ComparisonResult:
+    """Compare two persisted run reports and evaluate CI gates.
+
+    ``flakiness_report`` is optional sidecar evidence used only when
+    ``thresholds.max_flakiness_rate`` is set. Omitting it (the default)
+    preserves prior compare behaviour for every caller that never opts in.
+    """
+
+    limits = thresholds or GateThresholds()
+    reasons: list[str] = []
+    metrics: list[MetricDelta] = []
+    significance: SignificanceResult | None = None
+
+    for key, higher_is_better in _METRICS:
+        base = _number(baseline, key)
+        cur = _number(current, key)
+        delta = None if base is None or cur is None else cur - base
+        metrics.append(MetricDelta(key, base, cur, delta, higher_is_better))
+
+    base_correctness = _number(baseline, "correctness_rate")
+    current_correctness = _number(current, "correctness_rate")
+    if base_correctness is None or current_correctness is None:
+        reasons.append("correctness_rate is missing or invalid")
+    else:
+        drop = base_correctness - current_correctness
+        if drop > limits.max_correctness_drop + 1e-12:
+            base_reason = (
+                f"correctness dropped {drop * 100:.1f}pp "
+                f"(allowed {limits.max_correctness_drop * 100:.1f}pp)"
+            )
+            if not limits.require_statistical_significance:
+                reasons.append(base_reason)
+            else:
+                significance = evaluate_significance(
+                    baseline, current, alpha=limits.significance_alpha
+                )
+                mcnemar = significance.mcnemar
+                if mcnemar.method == "insufficient_data":
+                    # Can't verify significance (e.g. no overlapping case ids
+                    # with a boolean verdict in both runs) -- fail safe rather
+                    # than silently letting an unverifiable drop through.
+                    reasons.append(
+                        f"{base_reason} (statistical significance could not be verified: "
+                        "no paired cases with a determinate verdict in both runs)"
+                    )
+                elif mcnemar.significant:
+                    reasons.append(
+                        f"{base_reason} -- statistically significant "
+                        f"(McNemar p={mcnemar.p_value:.4g} < alpha={limits.significance_alpha})"
+                    )
+                # else: the drop is not statistically significant at the
+                # configured alpha -- treated as noise, so no reason is
+                # appended and the gate does not fail on this metric alone.
+
+    hallucination = _number(current, "hallucination_rate")
+    if hallucination is None:
+        reasons.append("hallucination_rate is missing or invalid")
+    elif hallucination > limits.max_hallucination_rate + 1e-12:
+        reasons.append(
+            f"hallucination rate {hallucination * 100:.1f}% exceeds "
+            f"{limits.max_hallucination_rate * 100:.1f}%"
+        )
+
+    tool_accuracy = _number(current, "tool_call_accuracy")
+    if tool_accuracy is None:
+        reasons.append("tool_call_accuracy is missing or invalid")
+    elif tool_accuracy < limits.min_tool_accuracy - 1e-12:
+        reasons.append(
+            f"tool accuracy {tool_accuracy * 100:.1f}% is below "
+            f"{limits.min_tool_accuracy * 100:.1f}%"
+        )
+
+    if limits.max_cost_increase_pct is not None:
+        base_cost = _number(baseline, "total_cost_usd")
+        current_cost = _number(current, "total_cost_usd")
+        if base_cost is None or current_cost is None:
+            reasons.append(
+                "total_cost_usd is missing or invalid (required by max_cost_increase_pct gate)"
+            )
+        elif base_cost > 0:
+            increase_pct = (current_cost - base_cost) / base_cost * 100
+            if increase_pct > limits.max_cost_increase_pct + 1e-9:
+                reasons.append(
+                    f"cost increased {increase_pct:.1f}% "
+                    f"(allowed {limits.max_cost_increase_pct:.1f}%)"
+                )
+        elif current_cost > 0:
+            reasons.append(
+                f"cost increased from $0 to ${current_cost:.6f} "
+                "(baseline had no cost to compare against)"
+            )
+
+    if limits.max_latency_p95_ms is not None:
+        current_latency = _number(current, "latency_p95_ms")
+        if current_latency is None:
+            reasons.append(
+                "latency_p95_ms is missing or invalid (required by max_latency_p95_ms gate)"
+            )
+        elif current_latency > limits.max_latency_p95_ms + 1e-9:
+            reasons.append(
+                f"p95 latency {current_latency:.0f}ms exceeds {limits.max_latency_p95_ms:.0f}ms"
+            )
+
+    if limits.max_token_increase_pct is not None:
+        base_tokens = _number(baseline, "total_tokens")
+        current_tokens = _number(current, "total_tokens")
+        if base_tokens is None or current_tokens is None:
+            reasons.append(
+                "total_tokens is missing or invalid (required by max_token_increase_pct gate)"
+            )
+        elif base_tokens > 0:
+            increase_pct = (current_tokens - base_tokens) / base_tokens * 100
+            if increase_pct > limits.max_token_increase_pct + 1e-9:
+                reasons.append(
+                    f"token usage increased {increase_pct:.1f}% "
+                    f"(allowed {limits.max_token_increase_pct:.1f}%)"
+                )
+        elif current_tokens > 0:
+            reasons.append(
+                f"token usage increased from 0 to {current_tokens:.0f} "
+                "(baseline had no token usage to compare against)"
+            )
+
+    base_cases = _cases_by_id(baseline)
+    current_cases = _cases_by_id(current)
+    all_case_ids = sorted(set(base_cases) | set(current_cases))
+    transitions = [
+        CaseTransition(
+            case_id=case_id,
+            baseline_status=case_status(base_cases.get(case_id)),
+            current_status=case_status(current_cases.get(case_id)),
+        )
+        for case_id in all_case_ids
+    ]
+    missing_cases = sum(
+        1
+        for transition in transitions
+        if transition.baseline_status != "missing"
+        and transition.current_status == "missing"
+    )
+    if missing_cases:
+        reasons.append(f"current run is missing {missing_cases} baseline case(s)")
+
+    skipped_cases = sum(
+        1 for transition in transitions if transition.current_status == "skipped"
+    )
+    if skipped_cases:
+        reasons.append(f"current run contains {skipped_cases} skipped case(s)")
+
+    evaluator_errors = sum(
+        1 for transition in transitions if transition.current_status == "evaluator_error"
+    )
+    if limits.fail_on_evaluator_error and evaluator_errors:
+        reasons.append(f"current run contains {evaluator_errors} evaluator error(s)")
+    agent_errors = sum(
+        1 for transition in transitions if transition.current_status == "agent_error"
+    )
+    if limits.fail_on_agent_error and agent_errors:
+        reasons.append(f"current run contains {agent_errors} agent execution error(s)")
+
+    # Opt-in observability gates — only when explicitly configured.
+    reasons.extend(trajectory_gate_reasons(current, limits.min_trajectory_f1))
+    reasons.extend(flakiness_gate_reasons(flakiness_report, limits.max_flakiness_rate))
+
+    return ComparisonResult(
+        passed=not reasons,
+        reasons=reasons,
+        metrics=metrics,
+        case_transitions=transitions,
+        evaluator_error_count=evaluator_errors,
+        agent_error_count=agent_errors,
+        significance=significance,
+    )
+
+
+def load_report(path: str | Path) -> dict[str, Any]:
+    p = Path(path)
+    with p.open(encoding="utf-8") as handle:
+        data = json.load(handle)
+    if not isinstance(data, dict):
+        raise ValueError(f"Run report must be a JSON object: {p}")
+    return data
+
+
+def latest_run_file(runs_dir: str | Path, *, exclude: Iterable[Path] = ()) -> Path:
+    directory = Path(runs_dir)
+    excluded = {p.resolve() for p in exclude}
+    candidates = [
+        p for p in directory.glob("*.json") if p.resolve() not in excluded
+    ]
+    if not candidates:
+        raise FileNotFoundError(f"No current run JSON found in {directory}")
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def format_markdown(result: ComparisonResult) -> str:
+    status = "PASSED" if result.passed else "FAILED"
+    lines = [f"# AgentEval regression gate: {status}", "", "## Metrics", ""]
+    lines.extend(["| Metric | Baseline | Current | Delta |", "|---|---:|---:|---:|"])
+    for metric in result.metrics:
+        base = "n/a" if metric.baseline is None else f"{metric.baseline:.6f}"
+        cur = "n/a" if metric.current is None else f"{metric.current:.6f}"
+        delta = "n/a" if metric.delta is None else f"{metric.delta:+.6f}"
+        lines.append(f"| {metric.key} | {base} | {cur} | {delta} |")
+
+    lines.extend(["", "## Gate reasons", ""])
+    if result.reasons:
+        lines.extend(f"- {reason}" for reason in result.reasons)
+    else:
+        lines.append("- All configured gates passed.")
+
+    # Surface opt-in flakiness/trajectory breaches with an explicit gate status
+    # next to the existing reasons list (no restructuring of other sections).
+    observability = [
+        reason
+        for reason in result.reasons
+        if "flakiness rate" in reason
+        or "trajectory F1" in reason
+        or "min_trajectory_f1 is set" in reason
+    ]
+    if observability:
+        lines.extend(["", "## Observability gates", ""])
+        lines.append(f"- **gate status:** FAIL ({len(observability)} breach(es))")
+
+    if result.significance is not None:
+        mcnemar = result.significance.mcnemar
+        lines.extend(["", "## Statistical significance (correctness)", ""])
+        lines.append(f"- **Verdict:** {mcnemar.verdict}")
+        lines.append(
+            f"- McNemar's test: {mcnemar.method}, {mcnemar.b} regressed / {mcnemar.c} improved "
+            f"out of {mcnemar.n_pairs} paired case(s)"
+            + (f", p={mcnemar.p_value:.4g}" if mcnemar.p_value is not None else "")
+        )
+        for warning in mcnemar.warnings:
+            lines.append(f"- ⚠ {warning}")
+        if result.significance.bootstrap is not None:
+            lines.append(f"- Bootstrap: {result.significance.bootstrap.verdict}")
+
+    changed = [
+        transition
+        for transition in result.case_transitions
+        if transition.baseline_status != transition.current_status
+    ]
+    lines.extend(["", "## Case transitions", ""])
+    if changed:
+        lines.extend(
+            f"- `{item.case_id}`: {item.baseline_status} → {item.current_status}"
+            for item in changed
+        )
+    else:
+        lines.append("- No case status changes.")
+    return "\n".join(lines) + "\n"
+
+
+def write_outputs(
+    result: ComparisonResult,
+    *,
+    json_path: str | Path | None = None,
+    markdown_path: str | Path | None = None,
+) -> None:
+    if json_path is not None:
+        path = Path(json_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result.to_dict(), indent=2) + "\n", encoding="utf-8")
+    if markdown_path is not None:
+        path = Path(markdown_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(format_markdown(result), encoding="utf-8")

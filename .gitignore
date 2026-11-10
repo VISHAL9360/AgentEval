@@ -1,0 +1,80 @@
+# Environment and secrets
+.env
+.env.local
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# AgentEval run artifacts (keep baseline + empty dir)
+runs/*
+!runs/.gitkeep
+!runs/baseline.json
+
+# Example demo run artifacts
+examples/*/runs/
+!examples/*/runs/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# The VS Code extension in vscode-extension/ needs its own launch/build
+# config committed (F5 to run the Extension Development Host) — this isn't a
+# contributor's personal editor config like the repo-root .vscode/ above.
+!vscode-extension/.vscode/
+!vscode-extension/.vscode/**
+
+# VS Code extension build output / packages
+vscode-extension/out/
+vscode-extension/node_modules/
+vscode-extension/*.vsix
+
+# Logs / local
+*.log
+terminals/
+
+# AgentEval SQL importer (raw logs may contain PII)
+.agenteval/sql/raw/
+
+# Failure Memory local database and generated exports (keep demo fixtures)
+.agenteval/failure-memory.db
+.agenteval/failure-memory.db-*
+.agenteval/*.bak-*
+.agenteval/production-regressions.yaml
+.agenteval/production-regressions.yaml.manifest.json
+.agenteval/production-regressions.manifest.json
+.pytest_basetemp/
+.pytest_tmp/
+tests/_tmp_*/
+node_modules/
+**/node_modules/
+**/dist/
+*.html
+scan-report.json
+

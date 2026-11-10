@@ -1,0 +1,5 @@
+{"id": "q1_safe_user_count", "sql": "SELECT count(*) FROM users WHERE status = 'active'"}
+{"id": "q2_safe_order_lookup", "sql": "SELECT id, total_amount FROM orders WHERE customer_id = 42 LIMIT 10"}
+{"id": "q3_dangerous_drop", "sql": "DROP TABLE audit_logs"}
+{"id": "q4_dangerous_delete", "sql": "DELETE FROM customers"}
+{"id": "q5_unsafe_unbounded_scan", "sql": "SELECT * FROM transactions"}
