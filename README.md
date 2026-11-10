@@ -8,6 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Uvicorn-009688.svg)](agenteval-api)
 [![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B.svg)](dashboard)
 [![CI Gate](https://img.shields.io/badge/CI%2FCD-Automated%20Quality%20Gate-orange.svg)](#-github-actions-cicd-workflow)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FVISHAL9360%2FAgentEval&root-directory=agenteval-dashboard)
 
 **A high-precision evaluation harness, automated regression gate, and flight-recorder memory system for Autonomous AI Agents.**
 
