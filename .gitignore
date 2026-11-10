@@ -75,6 +75,9 @@ tests/_tmp_*/
 node_modules/
 **/node_modules/
 **/dist/
-*.html
+/report.html
+/support_report.html
+!agenteval-dashboard/index.html
+!landing-page/index.html
 scan-report.json
 
